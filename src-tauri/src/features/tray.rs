@@ -48,20 +48,20 @@ pub fn init_tray(app_handle: &AppHandle) -> Result<()> {
 
 pub fn on_system_tray_event(app_handle: &AppHandle, event: SystemTrayEvent) {
     let display_dashboard = || {
-        let _ = show_dashboard(app_handle);
+        if let Err(e) = show_dashboard(app_handle) {
+            eprintln!("Failed to show dashboard: {}", e);
+        }
     };
 
     match event {
         #[cfg(not(target_os = "macos"))]
         SystemTrayEvent::LeftClick { .. } => display_dashboard(),
         SystemTrayEvent::MenuItemClick { id, .. } => {
-            if let Ok(menu_item) = MenuItemId::from_str(id.as_str()) {
-                match menu_item {
-                    MenuItemId::DisplayDashboard => display_dashboard(),
-                    MenuItemId::Restart => api::process::restart(&app_handle.env()),
-                    MenuItemId::Quit => exit_app(app_handle.clone()),
-                    _ => {}
-                }
+            match MenuItemId::from_str(id.as_str()) {
+                Ok(MenuItemId::DisplayDashboard) => display_dashboard(),
+                Ok(MenuItemId::Restart) => api::process::restart(&app_handle.env()),
+                Ok(MenuItemId::Quit) => exit_app(app_handle.clone()),
+                Ok(MenuItemId::AppVersion) | Err(_) => {} // Explicitly handle all cases
             }
         }
         _ => {}
